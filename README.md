@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/midya8/scratchgpt/actions/workflows/ci.yml/badge.svg)](https://github.com/midya8/scratchgpt/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](pyproject.toml)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
 
 A GPT built and trained **from scratch in pure NumPy**. No PyTorch, no JAX,
 no TensorFlow: one ~400-line reverse-mode autograd engine with hand-written
@@ -14,6 +14,19 @@ core and `numpy`.
 419,328 parameters | 2 layers, 4 heads, d_model 128 | val loss 1.83 nats/char
 3,000 steps at 88 ms/step | ~4.5 minutes on one CPU core | zero ML dependencies
 ```
+
+## Exact-continuation workbench (v0.2)
+
+[Open the offline browser replay](https://midya8.github.io/scratchgpt/) ·
+[Checkpoint contract and reproduction](CONTINUATION.md)
+
+The trainer now saves complete train/evaluation RNG state, Adam buffers and clock,
+data identity, numerical options and runtime metadata, with a validated no-pickle
+loader and atomic continuation saves. A separate synthetic audit checks all 13
+restart boundaries, exposes RNG/moment-loss counterexamples, and independently
+recomputes every Adam coordinate and transformer forward pass. The original
+Shakespeare model/results below are preserved, not retrained or rebenchmarked.
+Old inference checkpoints remain sampleable but are not exact-resume artifacts.
 
 ## Results
 
@@ -59,7 +72,7 @@ python -m scratchgpt.sample --ckpt checkpoints/final.npz --data data/tinyshakesp
 | `scratchgpt/nn.py` | Linear, Embedding, LayerNorm, causal multi-head self-attention, GELU MLP, pre-LN residual block |
 | `scratchgpt/model.py` | GPT: token + learned positional embeddings, causal mask, LM head, GPT-2-style residual init |
 | `scratchgpt/optim.py` | Adam with bias correction |
-| `scratchgpt/train.py` | Training loop: warmup, gradient-norm clipping, periodic eval, resumable checkpoints |
+| `scratchgpt/train.py` | Training loop: warmup, gradient-norm clipping, periodic eval, validated exact-continuation checkpoints |
 | `scratchgpt/sample.py` | Temperature + top-k sampling CLI |
 | `tests/` | Every autograd op checked against central finite differences; model forward/backward; a training run that must reduce loss; a **causal-leak test** proving position *t* cannot see position *t+1* |
 
@@ -79,8 +92,8 @@ python -m scratchgpt.sample --ckpt checkpoints/final.npz --data data/tinyshakesp
 ## Limitations (on purpose)
 
 Single CPU training means a small model and short context. The architecture
-scales; the training script already handles checkpoints and resume, so
-longer runs only need more wall time.
+scales; the training script already handles checkpoints and resume, within the same numerical environment. See the continuation contract for data,
+option and runtime constraints; this is not a cross-machine determinism promise.
 
 ## License
 
