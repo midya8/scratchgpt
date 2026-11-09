@@ -133,7 +133,7 @@ results. Regeneration across supported Python versions compares values within
 1e-6 rather than requiring saved runtime-specific digests. Browser float64/native
 float32 comparisons use 2e-5 forward and 2e-7 Adam absolute tolerances.
 
-The original model, autograd, optimizer, data utilities, ten original tests,
+The original model, autograd, optimizer, data utilities, eleven original tests,
 Shakespeare checkpoint/text, loss CSV/PNG and sample remain unchanged. The
 shipped parameter count is independently verified as 419,328; checkpoint SHA-256
 `3de6a1626e4489a2e0bc867fc58fe66d323ac6c527bb3af7be662b49510a817e`.
