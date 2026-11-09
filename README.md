@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/midya8/scratchgpt/actions/workflows/ci.yml/badge.svg)](https://github.com/midya8/scratchgpt/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.9%2B-blue.svg)](pyproject.toml)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](pyproject.toml)
 
 A GPT built and trained **from scratch in pure NumPy**. No PyTorch, no JAX,
 no TensorFlow: one ~400-line reverse-mode autograd engine with hand-written
