@@ -15,6 +15,19 @@ core and `numpy`.
 3,000 steps at 88 ms/step | ~4.5 minutes on one CPU core | zero ML dependencies
 ```
 
+## Exact-continuation workbench (v0.2)
+
+[Open the offline browser replay](https://midya8.github.io/scratchgpt/) ·
+[Checkpoint contract and reproduction](CONTINUATION.md)
+
+The trainer now saves complete train/evaluation RNG state, Adam buffers and clock,
+data identity, numerical options and runtime metadata, with a validated no-pickle
+loader and atomic continuation saves. A separate synthetic audit checks all 13
+restart boundaries, exposes RNG/moment-loss counterexamples, and independently
+recomputes every Adam coordinate and transformer forward pass. The original
+Shakespeare model/results below are preserved, not retrained or rebenchmarked.
+Old inference checkpoints remain sampleable but are not exact-resume artifacts.
+
 ## Results
 
 Loss curve from the shipped checkpoint (real training run, logged every 200 steps):
@@ -59,7 +72,7 @@ python -m scratchgpt.sample --ckpt checkpoints/final.npz --data data/tinyshakesp
 | `scratchgpt/nn.py` | Linear, Embedding, LayerNorm, causal multi-head self-attention, GELU MLP, pre-LN residual block |
 | `scratchgpt/model.py` | GPT: token + learned positional embeddings, causal mask, LM head, GPT-2-style residual init |
 | `scratchgpt/optim.py` | Adam with bias correction |
-| `scratchgpt/train.py` | Training loop: warmup, gradient-norm clipping, periodic eval, resumable checkpoints |
+| `scratchgpt/train.py` | Training loop: warmup, gradient-norm clipping, periodic eval, validated exact-continuation checkpoints |
 | `scratchgpt/sample.py` | Temperature + top-k sampling CLI |
 | `tests/` | Every autograd op checked against central finite differences; model forward/backward; a training run that must reduce loss; a **causal-leak test** proving position *t* cannot see position *t+1* |
 
@@ -79,8 +92,8 @@ python -m scratchgpt.sample --ckpt checkpoints/final.npz --data data/tinyshakesp
 ## Limitations (on purpose)
 
 Single CPU training means a small model and short context. The architecture
-scales; the training script already handles checkpoints and resume, so
-longer runs only need more wall time.
+scales; the training script already handles checkpoints and resume, within the same numerical environment. See the continuation contract for data,
+option and runtime constraints; this is not a cross-machine determinism promise.
 
 ## License
 
