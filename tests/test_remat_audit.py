@@ -11,7 +11,8 @@ from scratchgpt.remat_audit import audit,fixture,parse
 
 
 def test_all_checked_in_native_witnesses_rebuild_every_field():
-    from scripts.build_remat import build
+    import runpy
+    build=runpy.run_path(str(Path(__file__).resolve().parents[1]/'scripts/build_remat.py'))['build']
     old=json.loads((Path(__file__).resolve().parents[1]/'docs/remat-witnesses.json').read_text())
     fresh=build()
     def compare(a,b):
