@@ -18,6 +18,7 @@ jobs:
       - run: pip install -e '.[dev]'
       - run: pytest -q
       - run: python scripts/build_replay.py --check
+      - run: python scripts/build_remat.py --check
   browser:
     runs-on: ubuntu-latest
     steps:
@@ -35,3 +36,4 @@ jobs:
           python-version: '3.12'
       - run: pip install build uv
       - run: bash examples/verify_wheel.sh
+      - run: bash examples/verify_remat_wheel.sh
