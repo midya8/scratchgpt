@@ -57,7 +57,7 @@ counts, not peak memory or measured speed.
 
 ### Cached inference
 
-[Workbench source](docs/cache.html) · [Cache contract, timings and reproduction](CACHE.md)
+[Cache workbench](https://midya8.github.io/scratchgpt/cache.html) · [Cache contract, timings and reproduction](CACHE.md)
 
 An inference-only float32 weight snapshot reuses earlier keys and values while
 the context grows. Once the learned-position window shifts, it rebuilds the
