@@ -1,5 +1,7 @@
 # Cached inference and the context boundary
 
+[Run the cache workbench](https://midya8.github.io/scratchgpt/cache.html)
+
 The new path copies the original GPT's weights into an inference-only float32 NumPy snapshot. Prefill runs the full causal context; append computes only new token rows and reuses each layer's earlier keys and values. Training, `GPT.__call__`, the existing sampler, rematerialization and continuation formats stay unchanged.
 
 ## Try it
