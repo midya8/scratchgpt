@@ -98,3 +98,21 @@ option and runtime constraints; this is not a cross-machine determinism promise.
 ## License
 
 MIT. TinyShakespeare text is public domain.
+
+
+## v0.3: actual activation rematerialization
+
+[Run the full-backward workbench](https://midya8.github.io/scratchgpt/remat.html) · [Execution contract and reproduction](REMATERIALIZATION.md)
+
+An opt-in path now discards original NumPy transformer-block interiors after forward and recomputes them during backward, using the actual upstream VJP and adding every input/parameter contribution. Group consecutive blocks, inspect observed execution order and compare every gradient and one-step SGD weight. A separate float64 scalar-autograd browser engine runs the full tiny GPT and both backward paths, not stored native gradients. Every token, target and named weight is importable/exportable in a bounded CLI-compatible JSON input.
+
+111 Python tests retain all 70 prior tests; 18 full native witnesses contain 15,184 parameter positions, and independent Node comparisons check 61,888 numeric fields. Actual Chrome inspects 106,288 parameter-table cells, 1,206 coordinate selections, 54 layouts and two actual downloads replayed natively. Every one of the original trained checkpoint's 419,328 parameter gradients is checked for both block groupings; the model is not retrained. Both new CLI routes and the full native witnesses reproduce from the installed wheel outside the checkout.
+
+The graph diagnostics count reachable logical Tensor.data elements or independent browser scalar nodes, with explicit exclusions. They are not allocator memory, peak memory, process RSS or a speed benchmark. This is deterministic dropout=0 and first-order only, with unchanged inputs/parameters and a fresh graph for each backward pass. Original trainer, optimizer, default GPT/Tensor APIs, exact-continuation schema and Shakespeare results remain unchanged. Standard activation checkpointing is attributed to prior work; no new method, GPU kernel or training/generalization gain is claimed.
+
+```bash
+python -m scratchgpt.remat_audit --fixture > input.json
+python -m scratchgpt.remat_audit input.json > report.json
+python scripts/build_remat.py --check
+PYTHON=python bash examples/verify_remat_wheel.sh
+```
