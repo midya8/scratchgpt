@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scratchgpt"
-version = "0.3.0"
-description = "A GPT built and trained from scratch in pure NumPy. No PyTorch, no JAX: one tiny autograd engine, hand-written backprop, and a real trained model."
+version = "0.4.0"
+description = "A small NumPy GPT with autograd, exact continuation, block recomputation and cached inference."
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}
