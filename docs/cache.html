@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>ScratchGPT | Cache and context</title>
+    <link rel="stylesheet" href="cache.css" />
+    <script defer src="engine.js"></script>
+    <script defer src="cache-engine.js"></script>
+    <script defer src="cache-app.js"></script>
+  </head>
+  <body>
+    <header>
+      <a href="https://github.com/midya8/scratchgpt">ScratchGPT</a>
+      <nav>
+        <a href="./">Continuation</a><a href="remat.html">Rematerialization</a>
+      </nav>
+    </header>
+    <main>
+      <section class="hero">
+        <p class="eyebrow">Inference / key-value cache</p>
+        <h1>Keep the past.<br />Rebuild when it moves.</h1>
+        <p class="lead">
+          A causal transformer can reuse earlier keys and values. But shifting a
+          learned-position context window changes those states. Follow both
+          cases, one chunk at a time.
+        </p>
+        <p>
+          This page runs a small float64 browser model and a separate
+          full-forward reference. The native engine uses float32 copied weights
+          and is checked against the original NumPy GPT. Neither changes
+          training or the shipped Shakespeare checkpoint.
+        </p>
+      </section>
+      <section>
+        <h2>Run the model</h2>
+        <form id="audit-form">
+          <label>Control<select id="preset"></select></label>
+          <div class="columns">
+            <label
+              >Token IDs, JSON batch<textarea
+                id="tokens"
+                rows="3"
+                spellcheck="false"
+              ></textarea></label
+            ><label
+              >Chunk lengths, sum to the token count<textarea
+                id="chunks"
+                rows="3"
+                spellcheck="false"
+              ></textarea>
+            </label>
+          </div>
+          <p id="model-info" class="note"></p>
+          <button type="submit">Run cached and full forwards</button
+          ><button id="reset" type="button" class="secondary">
+            Reset control
+          </button>
+        </form>
+        <p id="error" role="alert"></p>
+        <p id="status" role="status">Loading controls...</p>
+        <details>
+          <summary>Edit or import all model weights</summary>
+          <p>
+            Bounded to three layers, width 12, vocabulary 16, context eight and
+            two sequences of up to 24 tokens. Weights are normalized to float32
+            before browser float64 arithmetic.
+          </p>
+          <textarea
+            id="input-json"
+            rows="12"
+            spellcheck="false"
+            aria-label="Complete input JSON"
+          ></textarea
+          ><button id="import" type="button">Use complete input</button>
+        </details>
+      </section>
+      <div id="results" hidden>
+        <section>
+          <h2>The context decides whether reuse is valid</h2>
+          <div class="metrics">
+            <div>
+              <strong id="logit-delta"></strong
+              ><span>largest browser cached/full logit difference</span>
+            </div>
+            <div>
+              <strong id="stale-delta"></strong
+              ><span>largest wrong-shift logit difference</span>
+            </div>
+          </div>
+          <p id="native-status" class="note"></p>
+          <p>
+            The wrong control drops old KV slots without rebuilding. It is
+            deliberately defined here, not attributed to a library. It can agree
+            on controls where the window never shifts or its length is one.
+          </p>
+          <label>Chunk to inspect<select id="step"></select></label>
+          <p id="step-info"></p>
+          <div class="table-wrap">
+            <p class="table-note">
+              1 means this query may attend to that key. Appended chunks need a
+              right-aligned causal mask.
+            </p>
+            <table id="mask">
+              <thead></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="table-wrap">
+            <p class="table-note">
+              Executed matrix shapes, not latency or FLOPs. Rows count token
+              rows projected per layer; score cells include masked entries.
+            </p>
+            <table id="steps">
+              <thead>
+                <tr>
+                  <th>Consumed</th>
+                  <th>Action</th>
+                  <th>Window starts</th>
+                  <th>Cumulative layer rows</th>
+                  <th>Score cells</th>
+                  <th>Native KV bytes</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+        <section>
+          <h2>Every logit and cached coordinate</h2>
+          <p class="note">
+            Wide data tables scroll sideways. All coordinates are also in the
+            full report download.
+          </p>
+          <div class="table-wrap">
+            <p class="table-note">
+              All returned positions and vocabulary entries for this chunk.
+            </p>
+            <table id="logits">
+              <thead>
+                <tr>
+                  <th>Batch</th>
+                  <th>Position</th>
+                  <th>Token</th>
+                  <th>Cached</th>
+                  <th>Full reference</th>
+                  <th>Difference</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <label>Cached layer<select id="layer"></select></label>
+          <div class="pager">
+            <button id="previous" class="secondary">Previous 32</button
+            ><span id="page-label"></span
+            ><button id="next" class="secondary">Next 32</button>
+          </div>
+          <div class="table-wrap">
+            <p class="table-note">
+              Complete KV arrays are paged, never sampled. Indices are batch /
+              head / position / feature.
+            </p>
+            <table id="kv">
+              <thead>
+                <tr>
+                  <th>Index</th>
+                  <th>Key</th>
+                  <th>Full key</th>
+                  <th>Value</th>
+                  <th>Full value</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <button id="download-input">Download native CLI input</button
+          ><button id="download-report" class="secondary">
+            Download browser report
+          </button>
+        </section>
+      </div>
+      <section>
+        <h2>Less repeated work does not always mean faster</h2>
+        <p>
+          A separate archived CPU run uses the original 419,328-parameter
+          checkpoint. Each case has 48 teacher-forced steps, two warmups and
+          seven timed repeats with rotating order. Compare the two NumPy arms to
+          isolate caching; the original autograd arm also includes graph
+          construction.
+        </p>
+        <div class="table-wrap">
+          <p class="table-note">
+            Local medians in milliseconds. The full-context case is retained
+            even when caching loses.
+          </p>
+          <table id="benchmark">
+            <thead>
+              <tr>
+                <th>Prompt length</th>
+                <th>Original autograd</th>
+                <th>NumPy full</th>
+                <th>NumPy cached</th>
+                <th>Full / cached</th>
+                <th>Window rebuilds</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div id="benchmark-cards" aria-label="Benchmark cases"></div>
+        <p class="note" id="benchmark-info"></p>
+        <a href="cache-benchmark.json"
+          >All repeats, logits, counters and environment details</a
+        >
+        <p>
+          KV bytes mean native ndarray payload only. They exclude the copied
+          weights, token history, temporaries, Python/BLAS storage, allocator
+          overhead and peak memory. Browser arrays have different storage.
+          Matrix counts are not a hardware cost model.
+        </p>
+      </section>
+      <section class="limits">
+        <h2>What stays outside this experiment</h2>
+        <p>
+          The native cache is an inference-only snapshot. Later training does
+          not update its copied weights. Low-level append refuses overflow;
+          rolling advance rebuilds all layers at every context crop. It does not
+          discard extra context to manufacture a speed win.
+        </p>
+        <p>
+          Native float32 and browser float64 arithmetic are compared
+          numerically, not called bitwise identical. Close logits can still
+          change a sampled token near an RNG threshold. The original sampler is
+          unchanged. This is not a new attention algorithm, GPU kernel,
+          inference server or general speed guarantee.
+        </p>
+        <p>
+          The browser controls are tiny synthetic models, some after three
+          original Adam updates. They are not the Shakespeare model. The
+          archived native benchmark does use that checkpoint without retraining
+          it. Its CPU model was not recorded, so these timings should not be
+          used for hardware comparisons.
+        </p>
+        <p>
+          <a href="https://github.com/midya8/scratchgpt">Source and tests</a> ·
+          <a href="https://github.com/karpathy/nanoGPT/pull/76"
+            >Earlier cache/context discussion</a
+          >
+          ·
+          <a href="https://huggingface.co/docs/transformers/model_doc/gpt2"
+            >GPT-2 position and cache contract</a
+          >
+        </p>
+      </section>
+    </main>
+    <footer>ScratchGPT / inspect the work, keep the limits visible</footer>
+  </body>
+</html>
