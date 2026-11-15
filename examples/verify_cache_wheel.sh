@@ -68,7 +68,13 @@ assert cli_benchmark['checkpoint_sha256'] == sha
 assert len(cli_benchmark['cases']) == 2
 for case in cli_benchmark['cases']:
     assert case['arms']['numpy_cached']['max_logit_delta'] < 1e-5
+# Run the token-label extension against installed modules, not the checkout.
+import runpy
+checks = runpy.run_path(str(root / 'tests/test_vocabulary_labels.py'))
+for name, check in checks.items():
+    if name.startswith('test_'):
+        check()
 print(json.dumps(dict(installed_modules=3, full_native_controls=controls['count'],
                      all_native_coordinates=True, audit_cli_routes=2, benchmark_cli=True,
-                     shipped_checkpoint_steps=80, window_rebuilds=16)))
+                     shipped_checkpoint_steps=80, window_rebuilds=16, vocabulary_label_tests=4)))
 PY
