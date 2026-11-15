@@ -81,7 +81,7 @@ PYTHON=python bash examples/verify_cache_wheel.sh
 
 ## What is checked
 
-The current suite has **158 Python tests** and **13 Node/Chrome tests**. All 111
+The current suite has **162 Python tests** and **13 Node/Chrome tests**. All 111
 Python tests from the rematerialization release remain. The new 47 cover cache
 boundaries, causality, ownership, rolling windows, malformed inputs and the
 three-arm benchmark without a speed gate.
@@ -96,6 +96,24 @@ The Chrome checks include trusted input edits, stale-output invalidation,
 320/390/1280-pixel layouts and real input/report downloads. Installed-wheel
 checks run outside the checkout. See each experiment's document for definitions,
 tolerances, exclusions and the commands that rebuild its evidence.
+
+## Token labels are not model features
+
+Four tests rename all seven token IDs in a small model, move token-embedding
+rows and output-head columns with them, and rename training targets. Twelve
+models take three Adam steps each: logits, losses, every parameter gradient,
+weights and both optimizer buffers agree after mapping the labels back. Six
+more models check every rematerialized block grouping. Twelve cached rollouts
+cross four context-window rebuilds each; logits follow the label mapping while
+KV arrays, work counts and payload sizes stay unchanged. One-sided input or
+output relabeling deliberately fails the comparison.
+
+These are finite consistency checks with float32 tolerances, not an independent
+transformer oracle, arbitrary basis invariance or a quality result. They do not
+claim bitwise loss/gradient/optimizer equality: a vocabulary permutation changes
+reduction order. No sampled-token equality is promised for a fixed random draw.
+The installed cache-wheel check runs all four tests outside the checkout.
+All 158 earlier Python tests and 13 Node/Chrome tests remain unchanged.
 
 ## The original trained model
 
